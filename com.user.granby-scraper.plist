@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.user.granby-scraper</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/joel/opt/anaconda3/envs/base312/bin/python</string>
+        <string>/Users/joel/PyProjects/police-journal/granby_scraper.py</string>
+        <string>--url</string>
+        <string>https://www.granby-ct.gov/Archive.aspx?AMID=40</string>
+        <string>--download-dir</string>
+        <string>/Users/joel/Documents/Granby_Police_Journals</string>
+        <string>--verbose</string>
+    </array>
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>9</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+    <key>StandardErrorPath</key>
+    <string>/Users/joel/Documents/Granby_Police_Journals/launchd_error.log</string>
+    <key>StandardOutPath</key>
+    <string>/Users/joel/Documents/Granby_Police_Journals/launchd_output.log</string>
+    <key>WorkingDirectory</key>
+    <string>/Users/joel/PyProjects/police-journal</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/Users/joel/opt/anaconda3/envs/base312/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <key>PYTHONPATH</key>
+        <string>/Users/joel/PyProjects/police-journal</string>
+    </dict>
+</dict>
+</plist>

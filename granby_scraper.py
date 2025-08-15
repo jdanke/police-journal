@@ -9,6 +9,7 @@ import re
 import sys
 import json
 import logging
+import argparse
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import urljoin, urlparse
@@ -17,15 +18,15 @@ from bs4 import BeautifulSoup
 
 class GranbyPDFScraper:
     def __init__(self, base_url="https://www.granby-ct.gov/Archive.aspx?AMID=40", 
-                 download_dir="granby_police_journals"):
+                 download_dir="granby_police_journals", log_level=logging.INFO):
         self.base_url = base_url
-        self.download_dir = Path(download_dir)
-        self.download_dir.mkdir(exist_ok=True)
+        self.download_dir = Path(download_dir).expanduser()
+        self.download_dir.mkdir(parents=True, exist_ok=True)
         
         # Setup logging
         log_file = self.download_dir / "scraper.log"
         logging.basicConfig(
-            level=logging.INFO,
+            level=log_level,
             format='%(asctime)s - %(levelname)s - %(message)s',
             handlers=[
                 logging.FileHandler(log_file),
@@ -33,6 +34,10 @@ class GranbyPDFScraper:
             ]
         )
         self.logger = logging.getLogger(__name__)
+        
+        # Log the configuration
+        self.logger.info(f"Initialized scraper with URL: {self.base_url}")
+        self.logger.info(f"Download directory: {self.download_dir}")
         
         # File to track downloaded files
         self.downloaded_files_db = self.download_dir / "downloaded_files.json"
@@ -173,12 +178,74 @@ class GranbyPDFScraper:
         
         self.logger.info("Scraping process completed")
 
+def parse_arguments():
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(
+        description='Granby Police Daily Journal PDF Scraper',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    
+    parser.add_argument(
+        '--url', 
+        type=str, 
+        default='https://www.granby-ct.gov/Archive.aspx?AMID=40',
+        help='URL to scrape PDFs from'
+    )
+    
+    parser.add_argument(
+        '--download-dir', 
+        type=str, 
+        default='~/Documents/Granby_Police_Journals',
+        help='Directory to download PDFs to (supports ~ expansion)'
+    )
+    
+    parser.add_argument(
+        '--verbose', '-v',
+        action='store_true',
+        help='Enable verbose logging'
+    )
+    
+    parser.add_argument(
+        '--config-file',
+        type=str,
+        help='JSON config file with settings (optional)'
+    )
+    
+    return parser.parse_args()
+
+def load_config_file(config_file_path):
+    """Load configuration from JSON file."""
+    try:
+        with open(config_file_path, 'r') as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        print(f"Warning: Could not load config file {config_file_path}: {e}")
+        return {}
+
 def main():
     """Main entry point."""
-    # You can customize the download directory here
-    download_dir = os.path.expanduser("~/Documents/Granby_Police_Journals")
+    args = parse_arguments()
     
-    scraper = GranbyPDFScraper(download_dir=download_dir)
+    # Load config file if specified
+    config = {}
+    if args.config_file:
+        config = load_config_file(args.config_file)
+    
+    # Command line arguments override config file
+    url = args.url or config.get('url', 'https://www.granby-ct.gov/Archive.aspx?AMID=40')
+    download_dir = args.download_dir or config.get('download_dir', '~/Documents/Granby_Police_Journals')
+    
+    # Set log level
+    log_level = logging.DEBUG if args.verbose else logging.INFO
+    
+    # Expand user path
+    download_dir = os.path.expanduser(download_dir)
+    
+    scraper = GranbyPDFScraper(
+        base_url=url,
+        download_dir=download_dir,
+        log_level=log_level
+    )
     scraper.run()
 
 if __name__ == "__main__":
