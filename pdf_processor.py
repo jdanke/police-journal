@@ -14,9 +14,14 @@ import pandas as pd
 import PyPDF2
 import fitz  # PyMuPDF for better text extraction
 
+
+
+
+
 class GranbyPDFProcessor:
-    def __init__(self, pdf_directory="granby_police_journals"):
+    def __init__(self, pdf_directory="granby_police_journals", verbose=True):
         self.pdf_directory = Path(pdf_directory)
+        self.verbose = verbose
         
         # Setup logging
         logging.basicConfig(
@@ -25,6 +30,9 @@ class GranbyPDFProcessor:
             handlers=[logging.StreamHandler(sys.stdout)]
         )
         self.logger = logging.getLogger(__name__)
+
+        if self.verbose:
+            self.logger.setLevel(logging.DEBUG)
         
         # Expected columns in the DataFrame
         self.columns = [
@@ -38,6 +46,123 @@ class GranbyPDFProcessor:
             "Primary Officer",
             "File Date"
         ]
+
+        self.call_type_categories = {
+            # Motor Vehicle
+            # AMV - abandoned
+            'MV ACCIDENT - PERSONAL INJURY': 'Motor Vehicle',
+            'MV ACCIDENT - PROPERTY': 'Motor Vehicle',
+            'MV COMPLAINT': 'Motor Vehicle',
+            'MV STOP': 'Motor Vehicle',
+            'DWI': 'Motor Vehicle',
+            'PARKING VIOLATION': 'Motor Vehicle',
+            'SCHOOL BUS COMPLAINT': 'Motor Vehicle',
+            'SELECTIVE ENFORCEMENT': 'Motor Vehicle',
+            'AMV': 'Motor Vehicle',
+            'DMV': 'Motor Vehicle',
+            'STOLEN MV': 'Motor Vehicle',
+            'REPOSSESSED VEHICLE ENTRY': 'Motor Vehicle',
+            'REGISTRATION CHECK': 'Motor Vehicle',
+            'REGISTRATION AND STOLEN CHECK': 'Motor Vehicle',
+            'SCHOOL TRAFFIC': 'Traffic Control',
+            'TRAFFIC CONTROL': 'Traffic Control',
+        
+            # Administrative
+            'COMMUNITY POLICING': 'Administrative',
+            'FINGERPRINTING-CIVILIA': 'Administrative',
+            'PISTOL PERMIT APPLICANT': 'Administrative',
+            'VENDOR PERMIT': 'Administrative',
+            'POLICE INFO': 'Administrative',
+            'RECORDS CHECK': 'Administrative',
+            'WANTS CHECK': 'Administrative',
+            'OFFICER RIDE ALONG': 'Administrative',
+            'TRAINING': 'Administrative',
+            'SPECIAL ASSIGNMENT': 'Administrative',
+            'SCHOOL DRILL': 'Administrative',
+            'WORK RELATED INJURY': 'Administrative',
+            'FOUND PROPERTY': 'Administrative',
+            'LOST PROPERTY': 'Administrative',
+            'LOST PLATE': 'Administrative',
+            
+            # Criminal
+            'BURGLARY - INACTIVE': 'Criminal',
+            'LARCENY': 'Criminal',
+            'FRAUD': 'Criminal',
+            'IDENTITY THEFT': 'Criminal',
+            'CRIMINAL MISCHIEF': 'Criminal',
+            'TRESPASS': 'Criminal',
+            'ILLEGAL BURNING': 'Criminal',
+            'ILLEGAL DUMPING': 'Criminal',
+            'GUNSHOT': 'Criminal',
+            
+            # Criminal
+            'DOMESTIC': 'Criminal',
+            'Criminal': 'Criminal',
+            'HARASSMENT': 'Criminal',
+            'BREACH OF PEACE': 'Criminal',
+            'WARRANT SERVICE': 'Criminal',
+            'WARRANT RECEIVED': 'Criminal',
+            'PROTECTIVE ORDER': 'Criminal',
+            'RESTRAINING ORDER': 'Criminal',
+            
+            # Alarms
+            'ALARM - BURGLARY': 'Alarms',
+            'ALARM - FIRE': 'Alarms',
+            'ALARM - ROBBERY': 'Alarms',
+            'ALARM - TROUBLE/UNKNOWN': 'Alarms',
+            
+            # Welfare
+            'CHECK ON WELFARE': 'Medical/Welfare',
+            'MEDICAL ASSIST': 'Medical/Welfare',
+            'LIFT ASSIST': 'Medical/Welfare',
+            'MISSING PERSON': 'Medical/Welfare',
+            'EMERGENCY COMMITTAL': 'Medical/Welfare',
+            'EMERGENCY (OTHER THAN FIRE)': 'Medical/Welfare',
+            'TRANSPORT CIVILIAN': 'Medical/Welfare',
+            
+            # Emergency
+            'FIRE': 'Emergency',
+            '911 UNKNOWN': 'Emergency',
+            'SMOKE IN AREA': 'Emergency',
+            'POWER OUTAGE': 'Emergency',
+            'PUBLIC HAZARD': 'Emergency',
+            'DAMAGE TO TOWN PROPERTY': 'Emergency',
+            
+            # Investigation
+            'INVESTIGATION': 'Investigation',
+            'FOLLOW-UP': 'Investigation',
+            'SUSPICIOUS INCIDENT': 'Investigation',
+            'SUSPICIOUS PERSON': 'Investigation',
+            'UNKNOWN COMPLAINT': 'Investigation',
+            'SUSPICIOUS MOTOR VEHICLE': 'Investigation',
+            
+            # Complaint
+            'NOISE COMPLAINT': 'Complaint',
+            'ANIMAL COMPLAINT': 'Complaint',
+            'DOG COMPLAINT': 'Complaint',
+            'LOITERING': 'Complaint',
+            'OPEN DOOR': 'Complaint',
+            'LOCKOUT': 'Complaint',
+            
+            # Civil/Non-Criminal
+            'CIVIL MATTER': 'Civil',
+            'ESCORT': 'Civil',
+            
+            # Inter-Agency Cooperation
+            'ASSIST OUTSIDE AGENCY': 'Inter-Agency',
+            'MUTUAL AID': 'Inter-Agency',
+            'REGIONAL TEAM': 'Inter-Agency',
+            
+            # Proactive/Preventive
+            'BUSINESS CHECK': 'Patrol',
+            'DIRECTED FOOT PATROL': 'Patrol',
+            'DIRECTED MOTOR PATROL': 'Patrol',
+            'NEIGHBORHOOD CHECK': 'Patrol',
+            'VACANT/VACATION HOUSE': 'Patrol',
+            
+            # Juvenile
+            'JUVENILE': 'Juvenile',
+        }
     
     def extract_text_from_pdf(self, pdf_path: Path) -> str:
         """Extract text from PDF using PyMuPDF for better formatting."""
@@ -261,7 +386,7 @@ class GranbyPDFProcessor:
     
     def process_single_pdf(self, pdf_path: Path) -> List[Dict[str, Any]]:
         """Process a single PDF file and return records."""
-        self.logger.info(f"Processing {pdf_path.name}")
+        self.logger.debug(f"Processing {pdf_path.name}")
         
         # Extract file date from filename
         file_date = self.parse_date_from_filename(pdf_path.name)
@@ -278,7 +403,7 @@ class GranbyPDFProcessor:
         # Parse incident records
         records = self.parse_incident_records(text_lines, file_date)
         
-        self.logger.info(f"Extracted {len(records)} records from {pdf_path.name}")
+        self.logger.debug(f"Extracted {len(records)} records from {pdf_path.name}")
         return records
     
     def process_all_pdfs(self) -> pd.DataFrame:
@@ -308,6 +433,10 @@ class GranbyPDFProcessor:
         
         self.logger.info(f"Created DataFrame with {len(df)} total records")
         return df
+
+    def assign_categories(self, txt: str) -> str:
+        """Assign categories"""
+        return self.call_type_categories.get(txt.strip(), 'Other')
     
     def clean_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
         """Clean and standardize the DataFrame."""
@@ -332,8 +461,16 @@ class GranbyPDFProcessor:
         except:
             self.logger.warning("Could not parse dispatch dates")
         
+        df['Dispatch Hour'] = df['Dispatch Timestamp'].dt.hour
+
         # Sort by date and time
         df = df.sort_values(['Dispatch Date', 'Dispatch Time'], ascending=[True, True])
+
+        # Assign categories
+        df['Call Category'] = df['Call Type'].apply(lambda x: self.assign_categories(x))
+
+        check911 = ((df['Call Type'].str.contains('911') & (df['Primary Officer'].str.len() > 1))).astype('int')
+        df['Call Type'] = df['Call Type'].where(check911 == 0, '911 RESPONSE')
         
         # Reset index
         df = df.reset_index(drop=True)

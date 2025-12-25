@@ -1,0 +1,17 @@
+name: pandas
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - jupyterlab
+  - pandoc
+  - geopandas
+  - seaborn
+  - plotly
+  - pip
+  - matplotlib
+  - numpy
+  - openpyxl
+  - scipy
+  - pypdf2
+  - geopy
